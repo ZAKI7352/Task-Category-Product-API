@@ -1,6 +1,8 @@
+const { error } = require('console')
 let express = require('express')
 let app = express()
 let joi = require('joi')
+const { constrainedMemory } = require('process')
 let { Sequelize, Model, DataTypes, QueryTypes, Op } = require('sequelize')
 let sequelizeCon = new Sequelize('mysql://root@localhost/task-product')
 
@@ -57,9 +59,9 @@ Product.init({
         allowNull:false
     },
     slug:{
-        type: DataTypes.STRING
+        type: DataTypes.STRING,
     },
-    CategoryID: {
+    categoryID: {
         type: DataTypes.INTEGER,
         allowNull:false
     },
@@ -125,6 +127,53 @@ app.get('/category/all', async(req,res)=>{
     return res.send({data})
 })
 
+//Create Product joi validation
+async function checkCreate(data){
+    let schema = joi.object({
+        name: joi.string().required(),
+        price: joi.number().required(),
+        description: joi.string().required(),
+        categoryID: joi.number().required()
+    });
+    let valid = await schema.validateAsync(data,{abortEarly:false}).catch((error)=>{return{error}})
+    if (!valid || (valid && valid.error)){
+        let msg = []
+        for (let i of valid.error.details){
+            msg.push(i.message)
+        }
+        return {error: msg}
+    }
+    return {data:valid.data}
+}
+
+// Product Create Route with Error Logging
+app.post('/product/add', async (req, res) => {
+
+    let valid = await checkCreate(req.body).catch((error) => { return { error } });
+    if (!valid || (valid && valid.error)) {
+        return res.send({ error: valid.error });
+    }
+
+    let productData = {
+        name: req.body.name,
+        price: req.body.price,
+        description: req.body.description,
+        categoryID: req.body.categoryID,
+        slug: req.body.name.toLowerCase().replace(/\s+/g, '-')
+    };
+
+    let findProduct = await Product.findOne({ where: { slug: productData.slug } }).catch((error) => { return { error } });
+    if (findProduct && !findProduct.error) {
+        productData.slug = findProduct.slug + '-' + 1
+    }
+
+    try {
+        let data = await Product.create(productData);
+        return res.send({ data });
+    } catch (error) {
+        return res.send({ error: 'Failed to create product', details: error.message });
+    }
+});
 
 
 app.listen(3011, () => {
