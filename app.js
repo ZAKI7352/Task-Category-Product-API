@@ -113,6 +113,18 @@ app.post('/category/add', async (req,res)=>{
     return res.send (data)
 })
 
+//Get all Categories
+app.get('/category/all', async(req,res)=>{
+    let data = await Category.findAll()
+    .catch((error)=>{
+        return{error}
+    })
+    if (!data || (data && data.error)){
+        return res.send({error:'Unable to get all Category'})
+    }
+    return res.send({data})
+})
+
 
 
 app.listen(3011, () => {
