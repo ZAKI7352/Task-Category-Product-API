@@ -146,7 +146,7 @@ async function checkCreate(data){
     return {data:valid.data}
 }
 
-// Product Create Route with Error Logging
+// Product Create 
 app.post('/product/add', async (req, res) => {
 
     let valid = await checkCreate(req.body).catch((error) => { return { error } });
@@ -174,6 +174,30 @@ app.post('/product/add', async (req, res) => {
         return res.send({ error: 'Failed to create product', details: error.message });
     }
 });
+
+//Product Get
+app.get('/product/:getByHandle',async(req,res)=>{
+    let data = await Product.findOne({where:{slug: req.params.getByHandle}}).catch ((error)=>{return{error}});
+    if (!data || (data && data.error)){
+        return res.send({error:'Cant Get product'})
+    }
+    return res.send({data})
+})
+
+
+// Get All Products
+// app.get('/products/all', async (req, res) => {
+//     let data = await Product.findAll().catch((error) => {
+//         return { error };
+//     });
+    
+//     if (!data || (data && data.error)) {
+//         return res.send({ error: 'Failed to retrieve products' });
+//     }
+    
+//     return res.send({ data });
+// });
+
 
 
 app.listen(3011, () => {
