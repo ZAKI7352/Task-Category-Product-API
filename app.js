@@ -186,18 +186,55 @@ app.get('/product/:getByHandle',async(req,res)=>{
 
 
 // Get All Products
-// app.get('/products/all', async (req, res) => {
-//     let data = await Product.findAll().catch((error) => {
-//         return { error };
-//     });
+app.get('/products/all', async (req, res) => {
+    let data = await Product.findAll().catch((error) => {
+        return { error };
+    });
     
-//     if (!data || (data && data.error)) {
-//         return res.send({ error: 'Failed to retrieve products' });
-//     }
+    if (!data || (data && data.error)) {
+        return res.send({ error: 'Failed to retrieve products' });
+    }
     
-//     return res.send({ data });
-// });
+    return res.send({ data });
+});
 
+//product update joi validatio
+async function checkUpdate(data){
+    let schema = joi.object ({
+        name: joi.string(),
+        price: joi.number(),
+        description: joi.string(),
+        categoryID: joi.number()
+    })
+    let valid = await schema.validateAsync(data,{abortEarly:false}).catch((error)=>{return{error}});
+    if(!valid || (valid && valid.error)){
+        let msg = []
+        for (let i of valid.error.details){
+            msg.push(i.message)
+        }
+        return {error:msg}
+    }
+    return {data: valid.data}
+}
+
+//product update 
+app.put('/product/update/:productID', async (req,res)=>{
+    let valid = await checkUpdate(req.body).catch((error)=>{return{error}})
+    if (!valid || (valid && valid.error)){
+        return res.send({error : valid.error})
+    }
+
+    let find = await Product.findOne({where:{id:req.params.productID}}).catch((error)=>{return{error}})
+    if (!find || (find && find.errro)){
+        return res.send ({error: 'product does not exist'})
+    }
+
+    let data = await Product.update(req.body,{where:{id: req.params.productID}}).catch((error)=>{return{error}})
+    if (!data || (data && data.error)){
+        return res.send ({ error :'failed to update product'})
+    }
+    return res.send ({data:' product updated'})
+})
 
 
 app.listen(3011, () => {
