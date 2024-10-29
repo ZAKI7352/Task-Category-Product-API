@@ -237,6 +237,54 @@ app.put('/product/update/:productID', async (req,res)=>{
 })
 
 
+//product delete
+app.delete('/product/delete/:id',async (req,res)=>{
+    let find = await Product.findOne({where:{id:req.params.id}}).catch((error)=>{return{error}})
+    if (!find || (find && find.error)){
+        return res.send({error:'product not found'})
+    }
+    let data = await Product.destroy({where:{id:find.id}}).catch((error)=>{return{error}})
+    if (!data || (data && data.error)){
+        return res.send ({error:'Cant delete product'})
+    }
+    return res.send({data:'Product has been deleted'})
+})
+
+//get all products with pagination
+app.get('/product', async(req,res)=>{
+    let limit = (req.params.limit) ? parseInt(req.params.limit) : 10;
+    let page = (req.params.page) ? parseInt(req.params.page) : 1;
+    let offset = (page - 1) * limit
+    let counter = await Product.count().catch((error)=>{return{error}});
+    if (!counter || (counter && counter.error)){
+        return res.send({error:'Internal server error'})
+    }
+    if (counter <= 0 ){
+        return res.send ({error:'No product found'})
+    }
+    let pdata = await Product.findAll({limit,offset,row:true}).catch((error)=>{return{error}});
+    if (!pdata || (pdata && pdata.error)){
+        return res.send ({error:'Internal server error'})
+    }
+
+    let query = `select product.id,product.name,product.price,product.description,product.slug,category.cname
+        from product
+        left join category
+        on product.categoryID=category.id`
+
+    let join = await sequelizeCon.query(query,{type:QueryTypes.SELECT}).catch((error)=>{return{error}});
+    return res.send ({data:join, total:counter, page, limit})
+})
+
+//multiple product create
+app.post('/product/addproduct', async (req,res)=>{
+    let data = await Product.bulkCreate(req.body).catch((error)=>{return {error}});
+    if (!data || (data && data.error)){
+        return res.send ({error:'Unable to add product'})
+    }
+    return res.send ({product : data})
+})
+
 app.listen(3011, () => {
     console.log('DataBase Connected');
 })
